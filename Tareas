@@ -1,0 +1,83 @@
+
+# Encabezado --------------------------------------------------------------
+# Author(s): R, JB, LW
+#
+# Process: Estructura datos
+#
+# Inputs: data bank
+#
+# Outputs: Tareas
+#
+# File history:
+#   Creation : 11/10/2019
+
+rm(list = ls())
+
+# Librerias ---------------------------------------------------------------
+
+library(dplyr)
+library(purrr)
+library(corrplot)
+library(polycor)
+library(ggplot2)
+
+# definiciones globales ---------------------------------------------------
+
+varCat <- c("job", "marital", "education", "housing", "loan", "contact","month", "y")
+  
+varCont <- c("age", "balance","duration", "campaign", "pdays", "previous", "day")
+
+
+# Lectura datos -----------------------------------------------------------
+
+
+pathUnzip <- file.path("unzip")
+dir.create(pathUnzip, showWarnings = FALSE)
+list.files(pattern="\\.zip$", full.names=TRUE) %>% map(~unzip(.x, exdir = pathUnzip))
+
+# # Extract .ZIP files
+pathData <- list.files(pathUnzip, recursive = TRUE, pattern = ".csv", full.names = TRUE)
+
+dataBank <- pathData[1] %>% map_df(~read.delim(.x, sep = ";"))
+
+
+# Pre-procesamiento -----------------------------------------------------------
+
+lapply(dataBank[,varCat], function(x) prop.table(table(x, useNA="ifany"))*100)
+
+dataBank <- dataBank %>% 
+  select(-poutcome, -default) %>% 
+  mutate_if(is.integer, as.numeric)
+
+# Procesamiento -----------------------------------------------------------
+
+corCat <- hetcor(dataBank)
+corrplot(corCat$correlations, method = "number")
+corrplot.mixed(corCat$correlations, tl.col = "black", tl.pos = "lt", diag = "u")
+
+
+gCat  <-  ggplot(dataBank, aes(marital)) + geom_bar() + theme_minimal()+
+theme(axis.title.x = element_text(size = 3),
+  axis.text.x = element_text(size = 24), axis.text.y = element_text(size = 3),
+  axis.title.y = element_text(size = 3))
+
+g  <-  ggplot(dataBank, aes(y = age)) + geom_boxplot() + theme_minimal()+
+  theme(axis.text.x = element_text(size = 24), axis.text.y = element_text(size = 24))
+
+
+# Revisiòn clientes aprobados ---------------------------------------------
+
+bankYes <- dataBank %>% 
+  filter(y == 'yes')
+
+lapply(bankYes[,varCat], function(x) prop.table(table(x, useNA="ifany"))*100)
+
+
+gCat  <-  ggplot(bankYes, aes(marital)) + geom_bar() + theme_minimal()+
+  theme(axis.title.x = element_text(size = 3),
+        axis.text.x = element_text(size = 24), axis.text.y = element_text(size = 3),
+        axis.title.y = element_text(size = 3))
+
+g  <-  ggplot(bankYes, aes(y = age)) + geom_boxplot() + theme_minimal()+
+  theme(axis.text.x = element_text(size = 24), axis.text.y = element_text(size = 24))
+
